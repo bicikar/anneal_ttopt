@@ -21,8 +21,11 @@ def hop_path_results(hop_result, field, shortest, min_length):
             path_correctness = False
             break
         cost += cur_cost
-        
-    return path_correctness, admissible, identical_vertices, cost / min_length
+    
+    if cost >= min_length:
+        return path_correctness, admissible, identical_vertices, cost / min_length
+    else:
+        return False, False, False, 0
 
 
 def find_edge_index(arr, node):
