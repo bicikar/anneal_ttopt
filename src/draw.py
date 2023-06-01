@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 
-def draw_table_stat(correct_path, true_shortest, admissible, identical):
-    N = 100
+def draw_table_stat(correct_path, true_shortest, admissible, identical, N):
     string_array = [["",
                      "Edge init annealing", 
                      "Hop init annealing", 

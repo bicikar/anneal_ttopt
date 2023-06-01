@@ -1,6 +1,6 @@
 from qubovert.sim import anneal_qubo
 from qubovert import boolean_var
-from anneals import Graph, HopBased, EdgeBased
+from src.anneals import Graph, HopBased, EdgeBased
 from ttopt import TTOpt
 import numpy as np
 import matplotlib.pyplot as plt

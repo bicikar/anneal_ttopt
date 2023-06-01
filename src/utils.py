@@ -1,3 +1,5 @@
+from src.field import Field
+
 def hop_path_results(hop_result, field, shortest, min_length):
     cost = 0
     admissible = False
@@ -25,7 +27,7 @@ def hop_path_results(hop_result, field, shortest, min_length):
     if cost >= min_length:
         return path_correctness, admissible, identical_vertices, cost / min_length
     else:
-        return False, False, False, 0
+        return False, False, identical_vertices, 0
 
 
 def find_edge_index(arr, node):
@@ -80,9 +82,12 @@ def edge_path_results(edge_result, field, min_length):
         return False, False, path, cost / min_length
     if not len(edge_result):
         admissible = True
-    return path_correctness, admissible, path, cost / min_length
+    if cost >= min_length:
+        return path_correctness, admissible, path, cost / min_length
+    else:
+        return False, False, path, 0
 
-def run_stats(field, calls, hop_iter, edge_iter, iters=100):
+def run_stats(field, calls, hop_iter, edge_iter, iters=100, graph_num=1):
     correct_path_ttopt_edge = 0
     correct_path_ttopt_hop = 0
     correct_path_edge_init = 0
@@ -109,78 +114,83 @@ def run_stats(field, calls, hop_iter, edge_iter, iters=100):
     hop_costs = []
     hop_init_costs = []
     true_shortest = [0, 0, 0, 0, 0, 0]
+    
+    for gi in range(graph_num):
+        print(f'Running graph num{gi}')
+        for i in range(iters):
+            if i % 5 == 0:
+                print("Going through iter", i)
+            initial_edge, ttopt_edge_edges = field.prepare_initial("edge_based", calls)
+            initial_hop, ttopt_hop_edges = field.prepare_initial("hop_based", calls)
 
-    for i in range(iters):
-        if i % 5 == 0:
-            print("Going through iter", i)
-        initial_edge, ttopt_edge_edges = field.prepare_initial("edge_based", calls)
-        initial_hop, ttopt_hop_edges = field.prepare_initial("hop_based", calls)
+            edge_init_res = field.evaluate_annealing("edge_based", 100, edge_iter, initial_edge)
+            edge_res = field.evaluate_annealing("edge_based", 100, edge_iter)
+            hop_res = field.evaluate_annealing("hop_based", 100, hop_iter)
+            hop_init_res = field.evaluate_annealing("hop_based", 100, hop_iter, initial_hop)
 
-        edge_init_res = field.evaluate_annealing("edge_based", 100, edge_iter, initial_edge)
-        edge_res = field.evaluate_annealing("edge_based", 100, edge_iter)
-        hop_res = field.evaluate_annealing("hop_based", 100, hop_iter)
-        hop_init_res = field.evaluate_annealing("hop_based", 100, hop_iter, initial_hop)
+            ttopt_edge_info = edge_path_results(ttopt_edge_edges, field, min_cost)
+            hop_info = hop_path_results(hop_res, field, shortest, min_cost)
+            hop_init_info = hop_path_results(hop_init_res, field, shortest, min_cost)
+            ttopt_hop_info = hop_path_results(ttopt_hop_edges, field, shortest, min_cost)
+            edge_init_info = edge_path_results(edge_init_res, field, min_cost)
+            edge_info = edge_path_results(edge_res, field, min_cost)
 
-        ttopt_edge_info = edge_path_results(ttopt_edge_edges, field, min_cost)
-        hop_info = hop_path_results(hop_res, field, shortest, min_cost)
-        hop_init_info = hop_path_results(hop_init_res, field, shortest, min_cost)
-        ttopt_hop_info = hop_path_results(ttopt_hop_edges, field, shortest, min_cost)
-        edge_init_info = edge_path_results(edge_init_res, field, min_cost)
-        edge_info = edge_path_results(edge_res, field, min_cost)
+            if edge_init_info[0]:
+                correct_path_edge_init += 1
+                edge_init_costs.append(edge_init_info[3])
+                if edge_init_info[3] == 1.0:
+                    true_shortest[0] += 1
+            if edge_init_info[1]:
+                admissible_edge_init += 1
 
-        if edge_init_info[0]:
-            correct_path_edge_init += 1
-            edge_init_costs.append(edge_init_info[3])
-            if edge_init_info[3] == 1.0:
-                true_shortest[0] += 1
-        if edge_init_info[1]:
-            admissible_edge_init += 1
+            if hop_init_info[0]:
+                correct_path_hop_init += 1
+                hop_init_costs.append(hop_init_info[3])
+                if hop_init_info[3] == 1.0:
+                    true_shortest[1] += 1
+            if hop_init_info[1]:
+                admissible_hop_init += 1
+            if hop_init_info[2]:
+                identical_hop_init_to_shrotest += 1
 
-        if hop_init_info[0]:
-            correct_path_hop_init += 1
-            hop_init_costs.append(hop_init_info[3])
-            if hop_init_info[3] == 1.0:
-                true_shortest[1] += 1
-        if hop_init_info[1]:
-            admissible_hop_init += 1
-        if hop_info[2]:
-            identical_hop_init_to_shrotest += 1
+            if edge_info[0]:
+                correct_path_edge += 1
+                edge_costs.append(edge_info[3])
+                if edge_info[3] == 1.0:
+                    true_shortest[2] += 1
+            if edge_info[1]:
+                admissible_edge += 1
 
-        if edge_info[0]:
-            correct_path_edge += 1
-            edge_costs.append(edge_info[3])
-            if edge_info[3] == 1.0:
-                true_shortest[2] += 1
-        if edge_info[1]:
-            admissible_edge += 1
+            if hop_info[0]:
+                correct_path_hop += 1
+                hop_costs.append(hop_info[3])
+                if hop_info[3] == 1.0:
+                    true_shortest[3] += 1
+            if hop_info[1]:
+                admissible_hop += 1
+            if hop_info[2]:
+                identical_hop_to_shrotest += 1
 
-        if hop_info[0]:
-            correct_path_hop += 1
-            hop_costs.append(hop_info[3])
-            if hop_info[3] == 1.0:
-                true_shortest[3] += 1
-        if hop_info[1]:
-            admissible_hop += 1
-        if hop_info[2]:
-            identical_hop_to_shrotest += 1
+            if ttopt_edge_info[0]:
+                correct_path_ttopt_edge += 1
+                ttopt_edge_costs.append(ttopt_edge_info[3])
+                if ttopt_edge_info[3] == 1.0:
+                    true_shortest[4] += 1
+            if ttopt_edge_info[1]:
+                admissible_ttopt_edge += 1
 
-        if ttopt_edge_info[0]:
-            correct_path_ttopt_edge += 1
-            ttopt_edge_costs.append(ttopt_edge_info[3])
-            if ttopt_edge_info[3] == 1.0:
-                true_shortest[4] += 1
-        if ttopt_edge_info[1]:
-            admissible_ttopt_edge += 1
-
-        if ttopt_hop_info[0]:
-            correct_path_ttopt_hop += 1
-            ttopt_hop_costs.append(ttopt_hop_info[3])
-            if ttopt_hop_info[3] == 1.0:
-                true_shortest[5] += 1
-        if ttopt_hop_info[1]:
-            admissible_ttopt_hop += 1
-        if ttopt_hop_info[2]:
-            identical_ttopt_hop_to_shrotest += 1
+            if ttopt_hop_info[0]:
+                correct_path_ttopt_hop += 1
+                ttopt_hop_costs.append(ttopt_hop_info[3])
+                if ttopt_hop_info[3] == 1.0:
+                    true_shortest[5] += 1
+            if ttopt_hop_info[1]:
+                admissible_ttopt_hop += 1
+            if ttopt_hop_info[2]:
+                identical_ttopt_hop_to_shrotest += 1
+                
+        field = Field(field.width, field.height, end=(0, 0))
+        min_cost, shortest = field.calculate_shortest()
 
     correct_path = {}
     correct_path["ttopt_edge"] = correct_path_ttopt_edge
@@ -188,7 +198,7 @@ def run_stats(field, calls, hop_iter, edge_iter, iters=100):
     correct_path["edge_init"] = correct_path_edge_init
     correct_path["edge"] = correct_path_edge
     correct_path["hop_init"] = correct_path_hop_init
-    correct_path["hop"] = correct_path_hop_init
+    correct_path["hop"] = correct_path_hop
     
     admissible = {}
     admissible["ttopt_edge"] = admissible_ttopt_edge
@@ -196,7 +206,7 @@ def run_stats(field, calls, hop_iter, edge_iter, iters=100):
     admissible["edge_init"] = admissible_edge_init
     admissible["edge"] = admissible_edge
     admissible["hop_init"] = admissible_hop_init
-    admissible["hop"] = admissible_hop_init
+    admissible["hop"] = admissible_hop
     
     identical = {}
     identical["hop"] = identical_hop_to_shrotest
